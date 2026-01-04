@@ -116,10 +116,30 @@ const processVideo = async (videoId, io) => {
 
     } catch (error) {
         console.error(`Processing Error: ${error.message}`);
-        // video.processingStatus = 'failed'; 
-        // await video.save(); 
-        // Not saving failed state to DB to allow retry if it was just transient, but notifying user
-        io.to(video.user.toString()).emit('video_processing', { videoId, status: 'failed', msg: `Error: ${error.message}` });
+
+        // FAIL-SAFE: If AI fails, we still want the video to be viewable.
+        // Mark as 'completed' but 'flagged' with the error reason.
+        if (video) {
+            video.processingStatus = 'completed';
+            video.sensitivityStatus = 'flagged';
+            video.flaggedReason = `AI Processing Error: ${error.message}`;
+
+            // Set Placeholder if thumbnail failed
+            if (!video.thumbnailPath) {
+                video.thumbnailPath = 'https://via.placeholder.com/640x360.png?text=Processing+Error';
+            }
+
+            await video.save();
+            clearCache();
+
+            io.to(video.user.toString()).emit('video_processing', {
+                videoId,
+                status: 'completed',
+                sensitivity: 'flagged',
+                reason: video.flaggedReason,
+                msg: `AI Analysis Failed (Video is viewable): ${error.message}`
+            });
+        }
     }
 };
 
