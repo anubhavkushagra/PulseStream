@@ -39,7 +39,7 @@ const VideoItem = ({ video, onDelete, onAssign }) => {
             >
                 {video.processingStatus === 'completed' ? (
                     <video
-                        src={`http://localhost:5000/api/videos/${video._id}/stream#t=0.1`}
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/videos/${video._id}/stream#t=0.1`}
                         className="w-full h-full object-cover"
                         muted
                         loop
